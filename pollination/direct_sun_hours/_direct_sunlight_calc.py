@@ -37,7 +37,7 @@ class DirectSunHoursCalculation(DAG):
     def direct_radiation_calculation(
         self,
         fixed_radiance_parameters='-aa 0.0 -I -faa -ab 0 -dc 1.0 -dt 0.0 -dj 0.0 -dr 0',
-        conversion='47.4 119.9 11.6',
+        conversion='0.265 0.670 0.065',
         sensor_count=sensor_count,
         modifiers=sun_modifiers,
         sensor_grid=sensor_grid,

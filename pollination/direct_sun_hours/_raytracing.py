@@ -73,7 +73,7 @@ class DirectSunHoursEntryLoop(DAG):
         return [
             {
                 'from': MergeFiles()._outputs.result_file,
-                'to': '../../radiation-results/{{self.name}}.ill'
+                'to': '../../results/direct_radiation/{{self.name}}.ill'
             }
         ]
 
@@ -87,7 +87,7 @@ class DirectSunHoursEntryLoop(DAG):
         return [
             {
                 'from': MergeFiles()._outputs.result_file,
-                'to': '../../results/{{self.name}}.ill'
+                'to': '../../results/direct_sun_hours/{{self.name}}.ill'
             }
         ]
 
@@ -101,6 +101,6 @@ class DirectSunHoursEntryLoop(DAG):
         return [
             {
                 'from': MergeFiles()._outputs.result_file,
-                'to': '../../cumulative-results/{{self.name}}.res'
+                'to': '../../results/cumulative/{{self.name}}.res'
             }
         ]
