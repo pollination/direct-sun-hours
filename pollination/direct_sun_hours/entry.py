@@ -3,13 +3,14 @@ from dataclasses import dataclass
 from pollination.honeybee_radiance.sun import CreateSunMatrix, ParseSunUpHours
 from pollination.honeybee_radiance.translate import CreateRadianceFolder
 from pollination.honeybee_radiance.octree import CreateOctreeWithSky
-
+from pollination.path.copy import CopyMultiple
 
 # input/output alias
 from pollination.alias.inputs.model import hbjson_model_input
 from pollination.alias.inputs.wea import wea_input
 from pollination.alias.inputs.north import north_input
-# from pollination.alias.outputs.daylight import sort_direct_results/direct_sun_hours
+from pollination.alias.outputs.daylight import sort_annual_daylight_results, \
+    parse_hour_results
 
 from ._raytracing import DirectSunHoursEntryLoop
 
@@ -70,16 +71,21 @@ class DirectSunHoursEntryPoint(DAG):
                 'to': 'results/direct_sun_hours/grids_info.json'
             },
             {
-                'from': CreateRadianceFolder()._outputs.sensor_grids_file,
+                'from': CreateRadianceFolder()._outputs.sensor_grids,
+                'description': 'Sensor grids information.'
+            }
+        ]
+
+    @task(template=CopyMultiple, needs=[create_rad_folder])
+    def copy_grid_info(self, src=create_rad_folder._outputs.sensor_grids_file):
+        return [
+            {
+                'from': CopyMultiple()._outputs.dst_1,
                 'to': 'results/cumulative/grids_info.json'
             },
             {
-                'from': CreateRadianceFolder()._outputs.sensor_grids_file,
+                'from': CopyMultiple()._outputs.dst_2,
                 'to': 'results/direct_radiation/grids_info.json'
-            },
-            {
-                'from': CreateRadianceFolder()._outputs.sensor_grids,
-                'description': 'Sensor grids information.'
             }
         ]
 
@@ -134,13 +140,13 @@ class DirectSunHoursEntryPoint(DAG):
     direct_sun_hours = Outputs.folder(
         source='results/direct_sun_hours',
         description='Hourly results for direct sun hours.',
-        # alias=sort_direct_results/direct_sun_hours
+        alias=sort_annual_daylight_results
     )
 
     cumulative_sun_hours = Outputs.folder(
         source='results/cumulative',
         description='Cumulative results for direct sun hours for all the input hours.',
-        # alias=sort_direct_results/direct_sun_hours
+        alias=parse_hour_results
     )
 
     direct_radiation = Outputs.folder(
