@@ -20,7 +20,7 @@ setuptools.setup(
     setup_requires=['setuptools_scm'],
     url='https://github.com/pollination/direct-sun-hours',                   # will be translated to home
     project_urls={
-        'icon': 'https://raw.githubusercontent.com/ladybug-tools/artwork/master/icons_components/honeybee/png/annualrecipe.png',
+        'icon': 'https://raw.githubusercontent.com/ladybug-tools/artwork/master/icons_components/honeybee/png/directsun.png',
         'docker': 'https://hub.docker.com/r/ladybugtools/honeybee-radiance'
     },
     description='Direct sun hours recipe for Pollination.',                  # will be used as package description
