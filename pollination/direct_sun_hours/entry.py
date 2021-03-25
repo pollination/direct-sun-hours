@@ -137,12 +137,6 @@ class DirectSunHoursEntryPoint(DAG):
     ):
         pass
 
-    results = Outputs.folder(
-        source='results',
-        description='Results folder. There are 3 subfolders under results folder: '
-        'direct_sun_hours, cumulative and direct_radiation.'
-    )
-
     direct_sun_hours = Outputs.folder(
         source='results/direct_sun_hours',
         description='Hourly results for direct sun hours.',
