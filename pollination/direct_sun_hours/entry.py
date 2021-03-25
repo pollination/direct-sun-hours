@@ -158,6 +158,5 @@ class DirectSunHoursEntryPoint(DAG):
     direct_radiation = Outputs.folder(
         source='results/direct_radiation',
         description='Hourly direct radiation results. These results only includes the '
-        'direct radiation from sun disk.',
-        alias=direct_radiation_results
+        'direct radiation from sun disk.'
     )
