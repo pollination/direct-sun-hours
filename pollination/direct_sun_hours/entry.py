@@ -1,5 +1,6 @@
 from pollination_dsl.dag import Inputs, DAG, task, Outputs
 from dataclasses import dataclass
+from pollination.ladybug.translate import WeaToConstant
 from pollination.honeybee_radiance.sun import CreateSunMatrix, ParseSunUpHours
 from pollination.honeybee_radiance.translate import CreateRadianceFolderGrid
 from pollination.honeybee_radiance.octree import CreateOctreeWithSky
@@ -56,8 +57,21 @@ class DirectSunHoursEntryPoint(DAG):
         alias=wea_input
     )
 
-    @task(template=CreateSunMatrix)
-    def generate_sunpath(self, north=north, wea=wea, output_type=1):
+    @task(template=WeaToConstant)
+    def convert_wea_to_constant(self, wea=wea):
+        """Convert a wea to have constant irradiance values."""
+        return [
+            {
+                'from': WeaToConstant()._outputs.constant_wea,
+                'to': 'resources/constant.wea'
+            }
+        ]
+
+    @task(template=CreateSunMatrix, needs=[convert_wea_to_constant])
+    def generate_sunpath(
+            self, wea=convert_wea_to_constant._outputs.constant_wea,
+            north=north, output_type=1
+        ):
         """Create sunpath for sun-up-hours."""
         return [
             {'from': CreateSunMatrix()._outputs.sunpath, 'to': 'resources/sunpath.mtx'},
@@ -147,10 +161,4 @@ class DirectSunHoursEntryPoint(DAG):
         source='results/cumulative',
         description='Cumulative results for direct sun hours for all the input hours.',
         alias=cumulative_sun_hour_results
-    )
-
-    direct_radiation = Outputs.folder(
-        source='results/direct_radiation',
-        description='Hourly direct radiation results. These results only includes the '
-        'direct radiation from sun disk.'
     )

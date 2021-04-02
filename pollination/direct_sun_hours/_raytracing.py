@@ -63,23 +63,6 @@ class DirectSunHoursEntryLoop(DAG):
     @task(
         template=MergeFiles, needs=[direct_sunlight]
     )
-    def merge_radiation_results(
-        self, name=grid_name, extension='.ill', folder='direct-radiation'
-            ):
-        """Merge results from several grids into a single file.
-
-        These values are irradiance values.
-        """
-        return [
-            {
-                'from': MergeFiles()._outputs.result_file,
-                'to': '../../results/direct_radiation/{{self.name}}.ill'
-            }
-        ]
-
-    @task(
-        template=MergeFiles, needs=[direct_sunlight]
-    )
     def merge_direct_sun_hours(
         self, name=grid_name, extension='.ill', folder='direct-sun-hours'
             ):
