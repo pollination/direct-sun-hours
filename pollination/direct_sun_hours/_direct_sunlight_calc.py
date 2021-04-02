@@ -57,7 +57,7 @@ class DirectSunHoursCalculation(DAG):
     )
     def convert_to_sun_hours(
         self, input_mtx=direct_radiation_calculation._outputs.result_file,
-        grid_name=grid_name
+        grid_name=grid_name, minimum=0, include_min='exclude'
     ):
         return [
             {
