@@ -12,7 +12,7 @@ from pollination.alias.inputs.wea import wea_input
 from pollination.alias.inputs.north import north_input
 from pollination.alias.inputs.grid import sensor_count_input, grid_filter_input
 from pollination.alias.outputs.daylight import direct_sun_hours_results, \
-    cumulative_sun_hour_results, direct_radiation_results
+    cumulative_sun_hour_results
 
 from ._raytracing import DirectSunHoursEntryLoop
 
@@ -69,9 +69,9 @@ class DirectSunHoursEntryPoint(DAG):
 
     @task(template=CreateSunMatrix, needs=[convert_wea_to_constant])
     def generate_sunpath(
-            self, wea=convert_wea_to_constant._outputs.constant_wea,
-            north=north, output_type=1
-        ):
+        self, wea=convert_wea_to_constant._outputs.constant_wea,
+        north=north, output_type=1
+    ):
         """Create sunpath for sun-up-hours."""
         return [
             {'from': CreateSunMatrix()._outputs.sunpath, 'to': 'resources/sunpath.mtx'},
@@ -85,7 +85,14 @@ class DirectSunHoursEntryPoint(DAG):
     def create_rad_folder(self, input_model=model, grid_filter=grid_filter):
         """Translate the input model to a radiance folder."""
         return [
-            {'from': CreateRadianceFolderGrid()._outputs.model_folder, 'to': 'model'},
+            {
+                'from': CreateRadianceFolderGrid()._outputs.model_folder,
+                'to': 'model'
+            },
+            {
+                'from': CreateRadianceFolderGrid()._outputs.bsdf_folder,
+                'to': 'model/bsdf'
+            },
             {
                 'from': CreateRadianceFolderGrid()._outputs.sensor_grids_file,
                 'to': 'results/direct_sun_hours/grids_info.json'
@@ -138,7 +145,7 @@ class DirectSunHoursEntryPoint(DAG):
         needs=[create_octree, generate_sunpath, create_rad_folder],
         loop=create_rad_folder._outputs.sensor_grids,
         sub_folder='initial_results/{{item.name}}',  # create a subfolder for each grid
-        sub_paths={'sensor_grid': 'grid/{{item.full_id}}.pts'}  # sub_path for sensor_grid arg
+        sub_paths={'sensor_grid': 'grid/{{item.full_id}}.pts'}  # sensor_grid sub_path
     )
     def direct_sun_hours_raytracing(
         self,
@@ -147,7 +154,8 @@ class DirectSunHoursEntryPoint(DAG):
         grid_name='{{item.full_id}}',
         sensor_grid=create_rad_folder._outputs.model_folder,
         sunpath=generate_sunpath._outputs.sunpath,
-        sun_modifiers=generate_sunpath._outputs.sun_modifiers
+        sun_modifiers=generate_sunpath._outputs.sun_modifiers,
+        bsdfs=create_rad_folder._outputs.bsdf_folder
     ):
         pass
 

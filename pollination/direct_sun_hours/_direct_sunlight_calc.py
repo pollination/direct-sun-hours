@@ -33,6 +33,10 @@ class DirectSunHoursCalculation(DAG):
         'file to {grid_name}.ill'
     )
 
+    bsdfs = Inputs.folder(
+        description='Folder containing any BSDF files needed for ray tracing.'
+    )
+
     @task(template=DaylightContribution, sub_folder='direct-radiation')
     def direct_radiation_calculation(
         self,
@@ -42,8 +46,9 @@ class DirectSunHoursCalculation(DAG):
         modifiers=sun_modifiers,
         sensor_grid=sensor_grid,
         grid_name=grid_name,
-        scene_file=octree_file
-            ):
+        scene_file=octree_file,
+        bsdf_folder=bsdfs
+    ):
         return [
             {
                 'from': DaylightContribution()._outputs.result_file,
