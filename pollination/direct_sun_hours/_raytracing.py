@@ -36,6 +36,10 @@ class DirectSunHoursEntryLoop(DAG):
         description='A file with sun modifiers.'
     )
 
+    bsdfs = Inputs.folder(
+        description='Folder containing any BSDF files needed for ray tracing.'
+    )
+
     @task(template=SplitGrid)
     def split_grid(self, sensor_count=sensor_count, input_grid=sensor_grid):
         return [
@@ -55,8 +59,9 @@ class DirectSunHoursEntryLoop(DAG):
         grid_name='{{item.name}}',
         sun_modifiers=sun_modifiers,
         sensor_grid=split_grid._outputs.output_folder,
-        scene_file=octree_file
-            ):
+        scene_file=octree_file,
+        bsdfs=bsdfs
+    ):
         # the results of the loop will be collected under direct_sunlight subfolder.
         pass
 
@@ -65,7 +70,7 @@ class DirectSunHoursEntryLoop(DAG):
     )
     def merge_direct_sun_hours(
         self, name=grid_name, extension='.ill', folder='direct-sun-hours'
-            ):
+    ):
         """Merge direct sun hour results from several grids into a single file."""
         return [
             {
@@ -79,7 +84,7 @@ class DirectSunHoursEntryLoop(DAG):
     )
     def merge_cumulative_sun_hours(
         self, name=grid_name, extension='.res', folder='cumulative-sun-hours'
-            ):
+    ):
         """Merge cumulative sun hour results from several grids into a single file."""
         return [
             {
