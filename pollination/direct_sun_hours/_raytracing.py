@@ -37,7 +37,8 @@ class DirectSunHoursEntryLoop(DAG):
     )
 
     bsdfs = Inputs.folder(
-        description='Folder containing any BSDF files needed for ray tracing.'
+        description='Folder containing any BSDF files needed for ray tracing.',
+        optional=True
     )
 
     @task(template=SplitGrid)
