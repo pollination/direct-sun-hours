@@ -4,7 +4,7 @@ from pollination.ladybug.translate import WeaToConstant
 from pollination.honeybee_radiance.sun import CreateSunMatrix, ParseSunUpHours
 from pollination.honeybee_radiance.translate import CreateRadianceFolderGrid
 from pollination.honeybee_radiance.octree import CreateOctreeWithSky
-from pollination.path.copy import CopyMultiple
+from pollination.path.copy import Copy
 
 # input/output alias
 from pollination.alias.inputs.model import hbjson_model_input
@@ -103,16 +103,12 @@ class DirectSunHoursEntryPoint(DAG):
             }
         ]
 
-    @task(template=CopyMultiple, needs=[create_rad_folder])
+    @task(template=Copy, needs=[create_rad_folder])
     def copy_grid_info(self, src=create_rad_folder._outputs.sensor_grids_file):
         return [
             {
-                'from': CopyMultiple()._outputs.dst_1,
+                'from': Copy()._outputs.dst,
                 'to': 'results/cumulative/grids_info.json'
-            },
-            {
-                'from': CopyMultiple()._outputs.dst_2,
-                'to': 'results/direct_radiation/grids_info.json'
             }
         ]
 
