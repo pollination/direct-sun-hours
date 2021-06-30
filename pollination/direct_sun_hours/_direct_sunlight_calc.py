@@ -38,8 +38,8 @@ class DirectSunHoursCalculation(DAG):
         optional=True
     )
 
-    @task(template=DaylightContribution, sub_folder='direct-radiation')
-    def direct_radiation_calculation(
+    @task(template=DaylightContribution, sub_folder='direct-irradiance')
+    def direct_irradiance_calculation(
         self,
         fixed_radiance_parameters='-aa 0.0 -I -faa -ab 0 -dc 1.0 -dt 0.0 -dj 0.0 -dr 0',
         conversion='0.265 0.670 0.065',
@@ -58,11 +58,11 @@ class DirectSunHoursCalculation(DAG):
         ]
 
     @task(
-        template=ConvertToBinary, needs=[direct_radiation_calculation],
+        template=ConvertToBinary, needs=[direct_irradiance_calculation],
         sub_folder='direct-sun-hours'
     )
     def convert_to_sun_hours(
-        self, input_mtx=direct_radiation_calculation._outputs.result_file,
+        self, input_mtx=direct_irradiance_calculation._outputs.result_file,
         grid_name=grid_name, minimum=0, include_min='exclude'
     ):
         return [
