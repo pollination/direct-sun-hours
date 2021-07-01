@@ -22,6 +22,12 @@ class DirectSunHoursEntryPoint(DAG):
     """Direct sun hours entry point."""
 
     # inputs
+    timestep = Inputs.int(
+        description='Input wea timestep. This value will be used to divide the '
+        'cumulative results to ensure the units of the output are in hours.', default=1,
+        spec={'type': 'integer', 'minimum': 1, 'maximum': 60}
+    )
+
     north = Inputs.float(
         default=0,
         description='A number for rotation from north.',
@@ -145,6 +151,7 @@ class DirectSunHoursEntryPoint(DAG):
     )
     def direct_sun_hours_raytracing(
         self,
+        timestep=timestep,
         sensor_count=sensor_count,
         octree_file=create_octree._outputs.scene_file,
         grid_name='{{item.full_id}}',
@@ -163,6 +170,6 @@ class DirectSunHoursEntryPoint(DAG):
 
     cumulative_sun_hours = Outputs.folder(
         source='results/cumulative',
-        description='Cumulative results for direct sun hours for all the input hours.',
+        description='Cumulative direct sun hours for all the input hours.',
         alias=cumulative_sun_hour_results
     )

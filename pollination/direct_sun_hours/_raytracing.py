@@ -11,6 +11,12 @@ from ._direct_sunlight_calc import DirectSunHoursCalculation
 @dataclass
 class DirectSunHoursEntryLoop(DAG):
     # inputs
+    timestep = Inputs.int(
+        description='Input wea timestep. This value will be used to divide the '
+        'cumulative results to ensure the units of the output are in hours.', default=1,
+        spec={'type': 'integer', 'minimum': 1, 'maximum': 60}
+    )
+
     sensor_count = Inputs.int(
         default=200,
         description='The maximum number of grid points per parallel execution',
@@ -58,6 +64,7 @@ class DirectSunHoursEntryLoop(DAG):
         octree_file=octree_file,
         sensor_count='{{item.count}}',
         grid_name='{{item.name}}',
+        timestep=timestep,
         sun_modifiers=sun_modifiers,
         sensor_grid=split_grid._outputs.output_folder,
         scene_file=octree_file,
