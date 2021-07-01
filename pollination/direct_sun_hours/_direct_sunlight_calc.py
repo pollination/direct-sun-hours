@@ -8,6 +8,12 @@ from pollination.honeybee_radiance.contrib import DaylightContribution
 @dataclass
 class DirectSunHoursCalculation(DAG):
 
+    timestep = Inputs.int(
+        description='Input wea timestep. This value will be used to divide the '
+        'cumulative results to ensure the units of the output are in hours.', default=1,
+        spec={'type': 'integer', 'minimum': 1, 'maximum': 60}
+    )
+
     sun_modifiers = Inputs.file(
         description='A file with sun modifiers.'
     )
@@ -77,7 +83,8 @@ class DirectSunHoursCalculation(DAG):
         sub_folder='cumulative-sun-hours'
     )
     def calculate_cumulative_hours(
-        self, input_mtx=convert_to_sun_hours._outputs.output_mtx, grid_name=grid_name
+        self, input_mtx=convert_to_sun_hours._outputs.output_mtx,
+        grid_name=grid_name, divisor=timestep
     ):
         return [
             {
