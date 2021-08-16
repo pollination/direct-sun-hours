@@ -7,7 +7,7 @@ from pollination.honeybee_radiance.octree import CreateOctreeWithSky
 from pollination.path.copy import Copy
 
 # input/output alias
-from pollination.alias.inputs.model import hbjson_model_input
+from pollination.alias.inputs.model import hbjson_model_grid_input
 from pollination.alias.inputs.wea import wea_input
 from pollination.alias.inputs.north import north_input
 from pollination.alias.inputs.grid import sensor_count_input, grid_filter_input
@@ -54,7 +54,7 @@ class DirectSunHoursEntryPoint(DAG):
     model = Inputs.file(
         description='A Honeybee model in HBJSON file format.',
         extensions=['json', 'hbjson'],
-        alias=hbjson_model_input
+        alias=hbjson_model_grid_input
     )
 
     wea = Inputs.file(
