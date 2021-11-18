@@ -29,9 +29,7 @@ class DirectSunHoursCalculation(DAG):
     )
 
     sensor_count = Inputs.int(
-        default=200,
-        description='The maximum number of grid points per parallel execution',
-        spec={'type': 'integer', 'minimum': 1}
+        description='Number of sensors in the input sensor grid.'
     )
 
     grid_name = Inputs.str(
@@ -44,7 +42,7 @@ class DirectSunHoursCalculation(DAG):
         optional=True
     )
 
-    @task(template=DaylightContribution, sub_folder='direct-irradiance')
+    @task(template=DaylightContribution)
     def direct_irradiance_calculation(
         self,
         fixed_radiance_parameters='-aa 0.0 -I -faa -ab 0 -dc 1.0 -dt 0.0 -dj 0.0 -dr 0',
@@ -64,8 +62,7 @@ class DirectSunHoursCalculation(DAG):
         ]
 
     @task(
-        template=ConvertToBinary, needs=[direct_irradiance_calculation],
-        sub_folder='direct-sun-hours'
+        template=ConvertToBinary, needs=[direct_irradiance_calculation]
     )
     def convert_to_sun_hours(
         self, input_mtx=direct_irradiance_calculation._outputs.result_file,
@@ -74,13 +71,12 @@ class DirectSunHoursCalculation(DAG):
         return [
             {
                 'from': ConvertToBinary()._outputs.output_mtx,
-                'to': '{{self.grid_name}}.ill'
+                'to': '../direct_sun_hours/{{self.grid_name}}.ill'
             }
         ]
 
     @task(
         template=SumRow, needs=[convert_to_sun_hours],
-        sub_folder='cumulative-sun-hours'
     )
     def calculate_cumulative_hours(
         self, input_mtx=convert_to_sun_hours._outputs.output_mtx,
@@ -89,6 +85,6 @@ class DirectSunHoursCalculation(DAG):
         return [
             {
                 'from': SumRow()._outputs.output_mtx,
-                'to': '{{self.grid_name}}.res'
+                'to': '../cumulative/{{self.grid_name}}.res'
             }
         ]
