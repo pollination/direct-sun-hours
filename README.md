@@ -1,8 +1,6 @@
 # direct-sun-hours
 
-Direct sun hours recipe.
-
-Calculate the number of hours of direct sun received by grids of sensors during
+Direct sun hours recipe calculates the number of hours of direct sun received by grids of sensors during
 the time period of a specified Wea. The recipe generates 2 sub-folders of results:
 
 1. `direct_sun_hours`: Contains matrices of zero/one values indicating whether
