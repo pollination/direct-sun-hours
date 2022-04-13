@@ -8,3 +8,6 @@ the time period of a specified Wea. The recipe generates 2 sub-folders of result
 
 2. `cumulative`: The cumulative number of hours that each sensor can see the
   sun. Each value is always in hours.
+
+Using the -viz version of this recipe will produce a VTKjs file for visualizing
+the cumulative results.
