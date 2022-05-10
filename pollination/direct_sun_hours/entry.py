@@ -68,7 +68,7 @@ class DirectSunHoursEntryPoint(DAG):
 
     model = Inputs.file(
         description='A Honeybee model in HBJSON file format.',
-        extensions=['json', 'hbjson'],
+        extensions=['json', 'hbjson', 'pkl', 'hbpkl', 'zip'],
         alias=hbjson_model_grid_input
     )
 
@@ -203,7 +203,7 @@ class DirectSunHoursEntryPoint(DAG):
         template=DirectSunHoursCalculation,
         needs=[create_octree, generate_sunpath, create_rad_folder, split_grid_folder],
         loop=split_grid_folder._outputs.sensor_grids,
-        sub_folder='initial_results/{{item.full_id}}',  # create a subfolder for each grid
+        sub_folder='initial_results/{{item.full_id}}',  # subfolder for each grid
         sub_paths={'sensor_grid': '{{item.full_id}}.pts'}  # sensor_grid sub_path
     )
     def direct_sun_hours_raytracing(
