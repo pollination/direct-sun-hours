@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from pollination.honeybee_radiance.post_process import ConvertToBinary, SumRow
 from pollination.honeybee_radiance.contrib import DaylightContribution
+from pollination.path.copy import Copy
 
 
 @dataclass
@@ -71,6 +72,16 @@ class DirectSunHoursCalculation(DAG):
         return [
             {
                 'from': ConvertToBinary()._outputs.output_mtx,
+                'to': '{{self.grid_name}}_sun_hours.ill'
+            }
+        ]
+
+    @task(template=Copy, needs=[convert_to_sun_hours])
+    def copy_sun_hours(
+            self, grid_name=grid_name, src=convert_to_sun_hours._outputs.output_mtx):
+        return [
+            {
+                'from': Copy()._outputs.dst,
                 'to': '../direct_sun_hours/{{self.grid_name}}.ill'
             }
         ]
