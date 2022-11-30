@@ -1,12 +1,5 @@
 from pollination_dsl.dag import Inputs, DAG, task, Outputs
 from dataclasses import dataclass
-from pollination.ladybug.translate import WeaToConstant
-from pollination.honeybee_radiance.sun import CreateSunMatrix, ParseSunUpHours
-from pollination.honeybee_radiance.translate import CreateRadianceFolderGrid
-from pollination.honeybee_radiance.octree import CreateOctreeWithSky
-from pollination.honeybee_radiance.grid import SplitGridFolder, MergeFolderData
-from pollination.path.copy import Copy
-from pollination.path.write import WriteInt
 
 # input/output alias
 from pollination.alias.inputs.model import hbjson_model_grid_input
@@ -17,7 +10,9 @@ from pollination.alias.inputs.grid import grid_filter_input, \
 from pollination.alias.outputs.daylight import direct_sun_hours_results, \
     cumulative_sun_hour_results
 
+from ._prepare_folder import DirectSunHoursPrepareFolder
 from ._direct_sunlight_calc import DirectSunHoursCalculation
+from ._postprocess import DirectSunHoursPostprocess
 
 
 @dataclass
@@ -78,174 +73,74 @@ class DirectSunHoursEntryPoint(DAG):
         alias=wea_input
     )
 
-    @task(template=WeaToConstant)
-    def convert_wea_to_constant(self, wea=wea):
-        """Convert a wea to have constant irradiance values."""
-        return [
-            {
-                'from': WeaToConstant()._outputs.constant_wea,
-                'to': 'resources/constant.wea'
-            }
-        ]
-
-    @task(template=CreateSunMatrix, needs=[convert_wea_to_constant])
-    def generate_sunpath(
-        self, wea=convert_wea_to_constant._outputs.constant_wea,
-        north=north, output_type=1
+    @task(template=DirectSunHoursPrepareFolder)
+    def prepare_folder_direct_sun_hours(
+        self, timestep=timestep, north=north,
+        cpu_count=cpu_count, min_sensor_count=min_sensor_count,
+        grid_filter=grid_filter, model=model, wea=wea
     ):
-        """Create sunpath for sun-up-hours."""
-        return [
-            {'from': CreateSunMatrix()._outputs.sunpath, 'to': 'resources/sunpath.mtx'},
-            {
-                'from': CreateSunMatrix()._outputs.sun_modifiers,
-                'to': 'resources/suns.mod'
-            }
-        ]
-
-    @task(template=ParseSunUpHours, needs=[generate_sunpath])
-    def parse_sun_up_hours(self, sun_modifiers=generate_sunpath._outputs.sun_modifiers):
         return [
             {
-                'from': ParseSunUpHours()._outputs.sun_up_hours,
-                'to': 'results/direct_sun_hours/sun-up-hours.txt'
-            }
-        ]
-
-    @task(template=WriteInt)
-    def write_timestep(self, src=timestep):
-        return [
-            {
-                'from': WriteInt()._outputs.dst,
-                'to': 'results/direct_sun_hours/timestep.txt'
-            }
-        ]
-
-    @task(template=CreateRadianceFolderGrid)
-    def create_rad_folder(self, input_model=model, grid_filter=grid_filter):
-        """Translate the input model to a radiance folder."""
-        return [
-            {
-                'from': CreateRadianceFolderGrid()._outputs.model_folder,
+                'from': DirectSunHoursPrepareFolder()._outputs.model_folder,
                 'to': 'model'
             },
             {
-                'from': CreateRadianceFolderGrid()._outputs.bsdf_folder,
-                'to': 'model/bsdf'
+                'from': DirectSunHoursPrepareFolder()._outputs.resources,
+                'to': 'resources'
             },
             {
-                'from': CreateRadianceFolderGrid()._outputs.sensor_grids_file,
-                'to': 'results/direct_sun_hours/grids_info.json'
+                'from': DirectSunHoursPrepareFolder()._outputs.initial_results,
+                'to': 'initial_results'
             },
             {
-                'from': CreateRadianceFolderGrid()._outputs.sensor_grids,
-                'description': 'Sensor grids information.'
-            }
-        ]
-
-    @task(template=Copy, needs=[create_rad_folder])
-    def copy_grid_info(self, src=create_rad_folder._outputs.sensor_grids_file):
-        return [
-            {
-                'from': Copy()._outputs.dst,
-                'to': 'results/cumulative/grids_info.json'
-            }
-        ]
-
-    @task(
-        template=CreateOctreeWithSky, needs=[generate_sunpath, create_rad_folder]
-    )
-    def create_octree(
-        self, model=create_rad_folder._outputs.model_folder,
-        sky=generate_sunpath._outputs.sunpath
-    ):
-        """Create octree from radiance folder and sunpath for direct studies."""
-        return [
-            {
-                'from': CreateOctreeWithSky()._outputs.scene_file,
-                'to': 'resources/scene_with_suns.oct'
-            }
-        ]
-
-    @task(
-        template=SplitGridFolder, needs=[create_rad_folder],
-        sub_paths={'input_folder': 'grid'}
-    )
-    def split_grid_folder(
-        self, input_folder=create_rad_folder._outputs.model_folder,
-        cpu_count=cpu_count, cpus_per_grid=1, min_sensor_count=min_sensor_count
-    ):
-        """Split sensor grid folder based on the number of CPUs"""
-        return [
-            {
-                'from': SplitGridFolder()._outputs.output_folder,
-                'to': 'resources/grid'
-            },
-            {
-                'from': SplitGridFolder()._outputs.dist_info,
-                'to': 'initial_results/direct_sun_hours/_redist_info.json'
-            },
-            {
-                'from': SplitGridFolder()._outputs.sensor_grids,
-                'description': 'Sensor grids information.'
-            }
-        ]
-
-    @task(template=Copy, needs=[split_grid_folder])
-    def copy_redist_info(self, src=split_grid_folder._outputs.dist_info):
-        return [
-            {
-                'from': Copy()._outputs.dst,
-                'to': 'initial_results/cumulative/_redist_info.json'
+                'from': DirectSunHoursPrepareFolder()._outputs.sensor_grids
             }
         ]
 
     @task(
         template=DirectSunHoursCalculation,
-        needs=[create_octree, generate_sunpath, create_rad_folder, split_grid_folder],
-        loop=split_grid_folder._outputs.sensor_grids,
+        needs=[prepare_folder_direct_sun_hours],
+        loop=prepare_folder_direct_sun_hours._outputs.sensor_grids,
         sub_folder='initial_results/{{item.full_id}}',  # subfolder for each grid
-        sub_paths={'sensor_grid': '{{item.full_id}}.pts'}  # sensor_grid sub_path
+        sub_paths={
+            'octree_file': 'scene_with_suns.oct',
+            'sensor_grid': 'grid/{{item.full_id}}.pts',
+            'sun_modifiers': 'suns.mod',
+            'bsdfs': 'bsdf'
+            }
     )
     def direct_sun_hours_raytracing(
         self,
         timestep=timestep,
         sensor_count='{{item.count}}',
-        octree_file=create_octree._outputs.scene_file,
+        octree_file=prepare_folder_direct_sun_hours._outputs.resources,
         grid_name='{{item.full_id}}',
-        sensor_grid=split_grid_folder._outputs.output_folder,
-        sunpath=generate_sunpath._outputs.sunpath,
-        sun_modifiers=generate_sunpath._outputs.sun_modifiers,
-        bsdfs=create_rad_folder._outputs.bsdf_folder
+        sensor_grid=prepare_folder_direct_sun_hours._outputs.resources,
+        sun_modifiers=prepare_folder_direct_sun_hours._outputs.resources,
+        bsdfs=prepare_folder_direct_sun_hours._outputs.model_folder
     ):
         pass
 
     @task(
-        template=MergeFolderData,
-        needs=[direct_sun_hours_raytracing]
-    )
-    def restructure_timestep_results(
-        self, input_folder='initial_results/direct_sun_hours',
-        extension='ill'
-    ):
-        return [
-            {
-                'from': MergeFolderData()._outputs.output_folder,
-                'to': 'results/direct_sun_hours'
+        template=DirectSunHoursPostprocess,
+        needs=[prepare_folder_direct_sun_hours, direct_sun_hours_raytracing],
+        sub_paths={
+            'grids_info': 'grids_info.json',
+            'sun_up_hours': 'sun-up-hours.txt',
+            'timestep': 'timestep.txt'
             }
-        ]
-
-    @task(
-        template=MergeFolderData,
-        needs=[direct_sun_hours_raytracing]
     )
-    def restructure_cumulative_results(
-        self, input_folder='initial_results/cumulative',
-        extension='res'
+    def postprocess_direct_sun_hours(
+        self, input_folder=prepare_folder_direct_sun_hours._outputs.initial_results,
+        grids_info=prepare_folder_direct_sun_hours._outputs.resources,
+        sun_up_hours=prepare_folder_direct_sun_hours._outputs.resources,
+        timestep=prepare_folder_direct_sun_hours._outputs.resources,
+        wea=wea,
     ):
         return [
             {
-                'from': MergeFolderData()._outputs.output_folder,
-                'to': 'results/cumulative'
+                'from': DirectSunHoursPostprocess()._outputs.results,
+                'to': 'results'
             }
         ]
 
