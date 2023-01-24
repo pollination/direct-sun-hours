@@ -14,7 +14,7 @@ with open('extras-requirements.txt') as f:
 
 # normal setuptool inputs
 setuptools.setup(
-    name='pollination-direct-sun-hours',                                     # will be used for package name
+    name='pollination-direct-sun-hours',                                    # will be used for package name
     author='ladybug-tools',                                                 # the owner account for this package - required if pushed to Pollination
     author_email='info@ladybug.tools',
     packages=setuptools.find_namespace_packages(                            # required - that's how pollination find the package
