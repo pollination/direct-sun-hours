@@ -12,6 +12,35 @@ with open('extras-requirements.txt') as f:
     extras_requirements = f.read().splitlines()
     extras_requirements = [req.replace('==', '>=') for req in extras_requirements]
 
+
+# read branch input and remove it from sys.argv
+if '--branch' in sys.argv:
+    index = sys.argv.index('--branch')
+    sys.argv.pop(index)
+    branch = sys.argv.pop(index)
+else:
+    branch = 'master'
+
+name = 'pollination-direct-sun-hours'
+if branch == 'viz':
+    name = f'{name}.viz'
+elif branch == 'express':
+    name = f'{name}.express'
+
+
+def _clean_version():
+    """Make sure the version will not be a local version."""
+
+    def get_version(version):
+        tag = str(version.tag)
+        return tag
+
+    def empty(version):
+        return ''
+
+    return {'local_scheme': get_version, 'version_scheme': empty}
+
+
 # normal setuptool inputs
 setuptools.setup(
     name='pollination-direct-sun-hours',                                    # will be used for package name
