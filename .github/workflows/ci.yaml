@@ -74,25 +74,39 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: visualization
+          ref: ${{ matrix.branch }}
           fetch-depth: 0
-      - name: rebase visualization branch
+      - name: rebase ${{ matrix.branch }} branch
         run: |
           git config --global user.email "ci@pollination.cloud"
           git config --global user.name "GitHub Actions"
           git rebase origin/master
-      - name: install python viz dependencies
-        run: pip install .[viz]
-      - name: deploy viz to staging
+      - name: install python additional dependencies
+        run: |
+          pip install -r dev-requirements.txt
+          pip install .[viz]
+      - name: deploy ${{ matrix.branch }} branch to staging
         env:
           TAG: ${{ needs.deploy.outputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           QB_POLLINATION_TOKEN: ${{ secrets.POLLINATION_STAGING_LADYBUGBOT_TOKEN }}
         run: |
-          TAG=$(echo "${TAG:?}-viz" | sed 's/[[:space:]]//g')
-          echo $TAG
+          TAG=$(echo "${TAG:?}" | sed 's/[[:space:]]//g')
+
+          echo $TAG-${{ matrix.branch }}
+
           queenbee
-          pollination dsl push pollination-direct-sun-hours --tag $TAG -e https://api.staging.pollination.cloud -src https://api.staging.pollination.cloud/registries --push-dependencies
+          pollination dsl push pollination-direct-sun-hours --tag $TAG-${{ matrix.branch }} -e https://api.staging.pollination.cloud -src https://api.staging.pollination.cloud/registries --push-dependencies
+
+      - name: deploy ${{ matrix.branch }} branch to PyPI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYPI_USERNAME: ${{ secrets.POLLINATION_PYPI_USERNAME }}
+          PYPI_PASSWORD: ${{ secrets.POLLINATION_PYPI_PASSWORD }}
+        run: |
+          python setup.py sdist bdist_wheel --branch ${{ matrix.branch }}
+          echo "Pushing new version to PyPi"
+          twine upload dist/* -u $PYPI_USERNAME -p $PYPI_PASSWORD
 
   deploy-to-production:
     name: Deploy to Pollination Production
@@ -118,8 +132,10 @@ jobs:
           pip install -r requirements.txt
       - name: deploy to production
         run: |
+          TAG=$(echo "${TAG:?}" | sed 's/[[:space:]]//g')
+          echo $TAG
           queenbee
-          pollination dsl push pollination-direct-sun-hours -e https://api.pollination.cloud -src https://api.pollination.cloud/registries --push-dependencies
+          pollination dsl push pollination-direct-sun-hours --tag $TAG -e https://api.pollination.cloud -src https://api.pollination.cloud/registries --push-dependencies
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           QB_POLLINATION_TOKEN: ${{ secrets.POLLINATION_LADYBUGBOT_TOKEN }}
@@ -141,22 +157,24 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: visualization
+          ref: ${{ matrix.branch }}
           fetch-depth: 0
-      - name: rebase visualization branch
+      - name: rebase ${{ matrix.branch }} branch
         run: |
             git config --global user.email "ci@pollination.cloud"
             git config --global user.name "GitHub Actions"
             git rebase origin/production
       - name: install python viz dependencies
         run: pip install .[viz]
-      - name: deploy viz to production
+      - name: deploy  ${{ matrix.branch }} to production
         env:
-          TAG: ${{ steps.get-context.outputs.tag }}
+          TAG: ${{ needs.deploy-to-production.outputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           QB_POLLINATION_TOKEN: ${{ secrets.POLLINATION_LADYBUGBOT_TOKEN }}
         run: |
-          TAG=$(echo "${TAG:?}-viz" | sed 's/[[:space:]]//g')
-          echo $TAG
+          TAG=$(echo "${TAG:?}" | sed 's/[[:space:]]//g')
+
+          echo $TAG-${{ matrix.branch }}
+
           queenbee
-          pollination dsl push pollination-direct-sun-hours --tag $TAG -e https://api.pollination.cloud -src https://api.pollination.cloud/registries --push-dependencies
+          pollination dsl push pollination-direct-sun-hours --tag $TAG-${{ matrix.branch }} -e https://api.pollination.cloud -src https://api.pollination.cloud/registries --push-dependencies
