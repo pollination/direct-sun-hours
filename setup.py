@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -43,7 +44,7 @@ def _clean_version():
 
 # normal setuptool inputs
 setuptools.setup(
-    name='pollination-direct-sun-hours',                                    # will be used for package name
+    name=name,                                    # will be used for package name
     author='ladybug-tools',                                                 # the owner account for this package - required if pushed to Pollination
     author_email='info@ladybug.tools',
     packages=setuptools.find_namespace_packages(                            # required - that's how pollination find the package
@@ -51,7 +52,7 @@ setuptools.setup(
     ),
     install_requires=requirements,
     extras_require={'viz': extras_requirements},
-    use_scm_version=True,
+    use_scm_version=_clean_version,
     setup_requires=['setuptools_scm'],
     url='https://github.com/pollination/direct-sun-hours',                   # will be translated to home
     project_urls={
