@@ -10,7 +10,7 @@ class DirectSunHoursEntryPoint(DAG):
 
     # inputs
     vectors = Inputs.file(
-        description='A file that includes sun vectors.',
+        description='A file that includes sun vectors.'
     )
 
     offset_dist = Inputs.float(
