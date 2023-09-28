@@ -1,19 +1,7 @@
 from pollination_dsl.dag import Inputs, DAG, task, Outputs
 from dataclasses import dataclass
-from pollination.honeybee_radiance_postprocess.grid import MergeFolderData
 
-# input/output alias
-from pollination.alias.inputs.model import hbjson_model_grid_input
-from pollination.alias.inputs.wea import wea_input
-from pollination.alias.inputs.north import north_input
-from pollination.alias.inputs.grid import grid_filter_input, \
-    min_sensor_count_input, cpu_count
-from pollination.alias.outputs.daylight import direct_sun_hours_results, \
-    cumulative_sun_hour_results
-
-from ._prepare_folder import DirectSunHoursPrepareFolder
-from ._direct_sunlight_calc import DirectSunHoursCalculation
-from ._postprocess import DirectSunHoursPostprocess
+from pollination.ladybug_radiance.direct_sunhours import DirectSunHours
 
 
 @dataclass
@@ -21,161 +9,53 @@ class DirectSunHoursEntryPoint(DAG):
     """Direct sun hours entry point."""
 
     # inputs
+    vectors = Inputs.file(
+        description='A file that includes sun vectors.'
+    )
+
+    offset_dist = Inputs.float(
+        description='Number in model units for the distance to move points from '
+        'the surfaces of the input geometry.', default=0.01,
+        spec={'type': 'number', 'maximum': 1.0, 'minimum': 0.001}
+    )
+
     timestep = Inputs.int(
-        description='Input wea timestep. This value will be used to divide the '
-        'cumulative results to ensure the units of the output are in hours.', default=1,
-        spec={'type': 'integer', 'minimum': 1, 'maximum': 60}
+        description='A number for vectors timesteps', default=1,
+        spec={'type': 'number', 'maximum': 60, 'minimum': 1}
     )
 
-    north = Inputs.float(
-        default=0,
-        description='A number between -360 and 360 for the counterclockwise '
-        'difference between the North and the positive Y-axis in degrees. This '
-        'can also be a Vector for the direction to North. (Default: 0).',
-        spec={'type': 'number', 'minimum': -360, 'maximum': 360},
-        alias=north_input
+    study_mesh = Inputs.file(
+        description='Path to a JSON file for input study mesh in Ladybug Geometry '
+        'format.'
     )
 
-    cpu_count = Inputs.int(
-        default=50,
-        description='The maximum number of CPUs for parallel execution. This will be '
-        'used to determine the number of sensors run by each worker.',
-        spec={'type': 'integer', 'minimum': 1},
-        alias=cpu_count
+    context_mesh = Inputs.file(
+        description='Path to a JSON file for input context mesh in Ladybug Geometry '
+        'format.', optional=True
     )
 
-    min_sensor_count = Inputs.int(
-        description='The minimum number of sensors in each sensor grid after '
-        'redistributing the sensors based on cpu_count. This value takes '
-        'precedence over the cpu_count and can be used to ensure that '
-        'the parallelization does not result in generating unnecessarily small '
-        'sensor grids. The default value is set to 1, which means that the '
-        'cpu_count is always respected.', default=500,
-        spec={'type': 'integer', 'minimum': 1},
-        alias=min_sensor_count_input
-    )
-
-    grid_filter = Inputs.str(
-        description='Text for a grid identifier or a pattern to filter the sensor grids '
-        'of the model that are simulated. For instance, first_floor_* will simulate '
-        'only the sensor grids that have an identifier that starts with '
-        'first_floor_. By default, all grids in the model will be simulated.',
-        default='*',
-        alias=grid_filter_input
-    )
-
-    model = Inputs.file(
-        description='A Honeybee model in HBJSON file format.',
-        extensions=['json', 'hbjson', 'pkl', 'hbpkl', 'zip'],
-        alias=hbjson_model_grid_input
-    )
-
-    wea = Inputs.file(
-        description='Wea file.',
-        extensions=['wea', 'epw'],
-        alias=wea_input
-    )
-
-    @task(template=DirectSunHoursPrepareFolder)
-    def prepare_folder_direct_sun_hours(
-        self, timestep=timestep, north=north,
-        cpu_count=cpu_count, min_sensor_count=min_sensor_count,
-        grid_filter=grid_filter, model=model, wea=wea
+    @task(template=DirectSunHours)
+    def run_direct_sun_hours(
+        self, vectors=vectors, offset_dist=offset_dist, timestep=timestep,
+        study_mesh=study_mesh, context_mesh=context_mesh
     ):
         return [
             {
-                'from': DirectSunHoursPrepareFolder()._outputs.model_folder,
-                'to': 'model'
+                'from': DirectSunHours()._outputs.direct_sunlight_values,
+                'to': 'direct_sun_hours.json'
             },
             {
-                'from': DirectSunHoursPrepareFolder()._outputs.resources,
-                'to': 'resources'
-            },
-            {
-                'from': DirectSunHoursPrepareFolder()._outputs.initial_results,
-                'to': 'initial_results'
-            },
-            {
-                'from': DirectSunHoursPrepareFolder()._outputs.sensor_grids
+                'from': DirectSunHours()._outputs.visualization_set,
+                'to': 'visualization/viz.vsf'
             }
         ]
 
-    @task(
-        template=DirectSunHoursCalculation,
-        needs=[prepare_folder_direct_sun_hours],
-        loop=prepare_folder_direct_sun_hours._outputs.sensor_grids,
-        sub_folder='initial_results/{{item.full_id}}',  # subfolder for each grid
-        sub_paths={
-            'octree_file': 'scene_with_suns.oct',
-            'sensor_grid': 'grid/{{item.full_id}}.pts',
-            'sun_modifiers': 'suns.mod',
-            'bsdfs': 'bsdf'
-            }
-    )
-    def direct_sun_hours_raytracing(
-        self,
-        timestep=timestep,
-        sensor_count='{{item.count}}',
-        octree_file=prepare_folder_direct_sun_hours._outputs.resources,
-        grid_name='{{item.full_id}}',
-        sensor_grid=prepare_folder_direct_sun_hours._outputs.resources,
-        sun_modifiers=prepare_folder_direct_sun_hours._outputs.resources,
-        bsdfs=prepare_folder_direct_sun_hours._outputs.model_folder
-    ):
-        pass
-
-    @task(
-        template=DirectSunHoursPostprocess,
-        needs=[prepare_folder_direct_sun_hours, direct_sun_hours_raytracing],
-        sub_paths={
-            'input_folder': 'cumulative',
-            'grids_info': 'grids_info.json',
-            'sun_up_hours': 'sun-up-hours.txt',
-            'timestep': 'timestep.txt',
-            'dist_info': 'grid/_redist_info.json'
-            }
-    )
-    def postprocess_direct_sun_hours(
-        self, input_folder=prepare_folder_direct_sun_hours._outputs.initial_results,
-        grids_info=prepare_folder_direct_sun_hours._outputs.resources,
-        sun_up_hours=prepare_folder_direct_sun_hours._outputs.resources,
-        timestep=prepare_folder_direct_sun_hours._outputs.resources,
-        dist_info=prepare_folder_direct_sun_hours._outputs.resources
-    ):
-        return [
-            {
-                'from': DirectSunHoursPostprocess()._outputs.results,
-                'to': 'results'
-            }
-        ]
-
-    @task(
-        template=MergeFolderData,
-        needs=[prepare_folder_direct_sun_hours, direct_sun_hours_raytracing],
-        sub_paths={
-            'dist_info': 'grid/_redist_info.json'
-        }
-    )
-    def restructure_results(
-        self, input_folder='initial_results/direct_sun_hours',
-        dist_info=prepare_folder_direct_sun_hours._outputs.resources,
-        extension='ill', as_text=True, fmt='%i', delimiter='tab'
-    ):
-        return [
-            {
-                'from': MergeFolderData()._outputs.output_folder,
-                'to': 'results/direct_sun_hours'
-            }
-        ]
-
-    direct_sun_hours = Outputs.folder(
-        source='results/direct_sun_hours',
-        description='Hourly results for direct sun hours.',
-        alias=direct_sun_hours_results
+    direct_sun_hours = Outputs.file(
+        source='direct_sun_hours.json',
+        description='Hourly results for direct sun hours.'
     )
 
-    cumulative_sun_hours = Outputs.folder(
-        source='results/cumulative',
-        description='Cumulative direct sun hours for all the input hours.',
-        alias=cumulative_sun_hour_results
+    visualization_set = Outputs.file(
+        source='visualization/viz.vsf',
+        description='Direct sun hours visualization.',
     )
