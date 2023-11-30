@@ -1,7 +1,7 @@
 from pollination_dsl.dag import Inputs, GroupedDAG, task, Outputs
 from dataclasses import dataclass
 from pollination.ladybug.translate import WeaToConstant
-from pollination.honeybee_radiance.sun import CreateSunMatrix, ParseSunUpHours
+from pollination.honeybee_radiance.sun import CreateSunMtx, ParseSunUpHours
 from pollination.honeybee_radiance.translate import CreateRadianceFolderGrid
 from pollination.honeybee_radiance.octree import CreateOctreeWithSky
 from pollination.honeybee_radiance.grid import SplitGridFolder
@@ -70,7 +70,7 @@ class DirectSunHoursPrepareFolder(GroupedDAG):
 
     wea = Inputs.file(
         description='Wea file.',
-        extensions=['wea'],
+        extensions=['wea', 'epw'],
         alias=wea_input
     )
 
@@ -84,19 +84,19 @@ class DirectSunHoursPrepareFolder(GroupedDAG):
             }
         ]
 
-    @task(template=CreateSunMatrix, needs=[convert_wea_to_constant])
+    @task(template=CreateSunMtx, needs=[convert_wea_to_constant])
     def generate_sunpath(
         self, wea=convert_wea_to_constant._outputs.constant_wea,
-        north=north, output_type=1
+        north=north, output_type='solar'
     ):
         """Create sunpath for sun-up-hours."""
         return [
             {
-                'from': CreateSunMatrix()._outputs.sunpath,
+                'from': CreateSunMtx()._outputs.sunpath,
                 'to': 'resources/sunpath.mtx'
             },
             {
-                'from': CreateSunMatrix()._outputs.sun_modifiers,
+                'from': CreateSunMtx()._outputs.sun_modifiers,
                 'to': 'resources/suns.mod'
             }
         ]
