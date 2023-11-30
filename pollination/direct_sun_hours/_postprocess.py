@@ -3,9 +3,6 @@ from dataclasses import dataclass
 from pollination.honeybee_radiance.grid import MergeFolderData
 from pollination.path.copy import CopyFile, CopyFileMultiple
 
-# input/output alias
-from pollination.alias.inputs.wea import wea_input
-
 
 @dataclass
 class DirectSunHoursPostprocess(GroupedDAG):
@@ -27,12 +24,6 @@ class DirectSunHoursPostprocess(GroupedDAG):
 
     timestep = Inputs.file(
         description='Timestep file.'
-    )
-
-    wea = Inputs.file(
-        description='Wea file.',
-        extensions=['wea'],
-        alias=wea_input
     )
 
     @task(template=CopyFile)

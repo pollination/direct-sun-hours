@@ -69,7 +69,7 @@ class DirectSunHoursEntryPoint(DAG):
 
     wea = Inputs.file(
         description='Wea file.',
-        extensions=['wea'],
+        extensions=['wea', 'epw'],
         alias=wea_input
     )
 
@@ -134,8 +134,7 @@ class DirectSunHoursEntryPoint(DAG):
         self, input_folder=prepare_folder_direct_sun_hours._outputs.initial_results,
         grids_info=prepare_folder_direct_sun_hours._outputs.resources,
         sun_up_hours=prepare_folder_direct_sun_hours._outputs.resources,
-        timestep=prepare_folder_direct_sun_hours._outputs.resources,
-        wea=wea,
+        timestep=prepare_folder_direct_sun_hours._outputs.resources
     ):
         return [
             {
