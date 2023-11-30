@@ -139,13 +139,18 @@ class DirectSunHoursEntryPoint(DAG):
         self, input_folder=prepare_folder_direct_sun_hours._outputs.initial_results,
         grids_info=prepare_folder_direct_sun_hours._outputs.resources,
         sun_up_hours=prepare_folder_direct_sun_hours._outputs.resources,
+        dist_info=prepare_folder_direct_sun_hours._outputs.resources,
         timestep=prepare_folder_direct_sun_hours._outputs.resources,
-        dist_info=prepare_folder_direct_sun_hours._outputs.resources
+        model=model
     ):
         return [
             {
                 'from': DirectSunHoursPostprocess()._outputs.results,
                 'to': 'results'
+            },
+            {
+                'from': DirectSunHoursPostprocess()._outputs.visualization,
+                'to': 'visualization.vsf'
             }
         ]
 

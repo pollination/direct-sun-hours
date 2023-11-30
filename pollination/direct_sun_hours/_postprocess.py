@@ -2,7 +2,9 @@ from pollination_dsl.dag import Inputs, GroupedDAG, task, Outputs
 from dataclasses import dataclass
 from pollination.honeybee_radiance.grid import MergeFolderData
 from pollination.honeybee_radiance_postprocess.grid import MergeFolderData as MergeFolderDataPostprocess
+from pollination.honeybee_radiance.post_process import DirectSunHoursVisMetadata
 from pollination.path.copy import CopyFile, CopyFileMultiple
+from pollination.honeybee_display.translate import ModelToVis
 
 
 @dataclass
@@ -10,6 +12,11 @@ class DirectSunHoursPostprocess(GroupedDAG):
     """Post-process for direct sun hours."""
 
     # inputs
+    model = Inputs.file(
+        description='Input Honeybee model.',
+        extensions=['json', 'hbjson', 'pkl', 'hbpkl', 'zip']
+    )
+
     input_folder = Inputs.folder(
         description='Folder with initial results before redistributing the '
         'results to the original grids.'
@@ -80,6 +87,34 @@ class DirectSunHoursPostprocess(GroupedDAG):
             }
         ]
 
+    @task(
+        template=DirectSunHoursVisMetadata,
+        needs=[restructure_cumulative_results]
+    )
+    def create_vis_metadata(self):
+        return [
+            {
+                'from': DirectSunHoursVisMetadata()._outputs.cfg_file,
+                'to': 'results/cumulative/vis_metadata.json'
+            }
+        ]
+
+    @task(template=ModelToVis, needs=[create_vis_metadata])
+    def create_vsf(
+        self, model=model, grid_data='results/cumulative', output_format='vsf'
+    ):
+        return [
+            {
+                'from': ModelToVis()._outputs.output_file,
+                'to': 'visualization.vsf'
+            }
+        ]
+
     results = Outputs.folder(
         source='results', description='results folder.'
+    )
+
+    visualization = Outputs.file(
+        source='visualization.vsf',
+        description='Direct sun hours result visualization in VisualizationSet format.'
     )
