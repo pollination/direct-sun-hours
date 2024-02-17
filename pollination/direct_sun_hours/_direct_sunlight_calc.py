@@ -69,7 +69,7 @@ class DirectSunHoursCalculation(DAG):
     )
     def calculate_direct_sun_hours(
         self, input_mtx=direct_irradiance_calculation._outputs.result_file,
-        divisor=timestep, grid_name=grid_name, 
+        divisor=timestep, grid_name=grid_name
     ):
         return [
             {
