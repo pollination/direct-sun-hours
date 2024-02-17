@@ -170,8 +170,8 @@ class DirectSunHoursPrepareFolder(GroupedDAG):
             },
             {
                 'from': SplitGridFolder()._outputs.dist_info,
-                'to': 'initial_results/direct_sun_hours/_redist_info.json'
-            }
+                'to': 'resources/grid/_redist_info.json'
+            },
         ]
 
     @task(template=CopyFile, needs=[split_grid_folder])

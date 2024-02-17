@@ -2,6 +2,7 @@ from pollination_dsl.dag import Inputs, DAG, task
 from dataclasses import dataclass
 
 from pollination.honeybee_radiance.post_process import ConvertToBinary, SumRow
+from pollination.honeybee_radiance_postprocess.post_process import DirectSunHours
 from pollination.honeybee_radiance.contrib import DaylightContribution
 from pollination.path.copy import Copy
 
@@ -46,13 +47,14 @@ class DirectSunHoursCalculation(DAG):
     @task(template=DaylightContribution)
     def direct_irradiance_calculation(
         self,
-        fixed_radiance_parameters='-aa 0.0 -I -faa -ab 0 -dc 1.0 -dt 0.0 -dj 0.0 -dr 0',
+        fixed_radiance_parameters='-aa 0.0 -I -faf -ab 0 -dc 1.0 -dt 0.0 -dj 0.0 -dr 0',
         conversion='0.265 0.670 0.065',
         sensor_count=sensor_count,
         modifiers=sun_modifiers,
         sensor_grid=sensor_grid,
         grid_name=grid_name,
         scene_file=octree_file,
+        output_format='f',
         bsdf_folder=bsdfs
     ):
         return [
@@ -63,39 +65,19 @@ class DirectSunHoursCalculation(DAG):
         ]
 
     @task(
-        template=ConvertToBinary, needs=[direct_irradiance_calculation]
+        template=DirectSunHours, needs=[direct_irradiance_calculation]
     )
-    def convert_to_sun_hours(
+    def calculate_direct_sun_hours(
         self, input_mtx=direct_irradiance_calculation._outputs.result_file,
-        grid_name=grid_name, minimum=0, include_min='exclude'
+        divisor=timestep, grid_name=grid_name, 
     ):
         return [
             {
-                'from': ConvertToBinary()._outputs.output_mtx,
-                'to': '{{self.grid_name}}_sun_hours.ill'
-            }
-        ]
-
-    @task(template=Copy, needs=[convert_to_sun_hours])
-    def copy_sun_hours(
-            self, grid_name=grid_name, src=convert_to_sun_hours._outputs.output_mtx):
-        return [
-            {
-                'from': Copy()._outputs.dst,
+                'from': DirectSunHours()._outputs.direct_sun_hours,
                 'to': '../direct_sun_hours/{{self.grid_name}}.ill'
-            }
-        ]
-
-    @task(
-        template=SumRow, needs=[convert_to_sun_hours],
-    )
-    def calculate_cumulative_hours(
-        self, input_mtx=convert_to_sun_hours._outputs.output_mtx,
-        grid_name=grid_name, divisor=timestep
-    ):
-        return [
+            },
             {
-                'from': SumRow()._outputs.output_mtx,
+                'from': DirectSunHours()._outputs.cumulative_direct_sun_hours,
                 'to': '../cumulative/{{self.grid_name}}.res'
             }
         ]

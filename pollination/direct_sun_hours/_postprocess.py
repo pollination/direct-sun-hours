@@ -1,6 +1,7 @@
 from pollination_dsl.dag import Inputs, GroupedDAG, task, Outputs
 from dataclasses import dataclass
 from pollination.honeybee_radiance.grid import MergeFolderData
+from pollination.honeybee_radiance_postprocess.grid import MergeFolderData as MergeFolderDataPostprocess
 from pollination.path.copy import CopyFile, CopyFileMultiple
 
 
@@ -24,6 +25,10 @@ class DirectSunHoursPostprocess(GroupedDAG):
 
     timestep = Inputs.file(
         description='Timestep file.'
+    )
+
+    dist_info = Inputs.file(
+        description='Distribution information file.',
     )
 
     @task(template=CopyFile)
@@ -62,16 +67,17 @@ class DirectSunHoursPostprocess(GroupedDAG):
         ]
 
     @task(
-        template=MergeFolderData, needs=[copy_sun_up_hours, copy_grid_info],
+        template=MergeFolderDataPostprocess, needs=[copy_sun_up_hours, copy_grid_info],
         sub_paths={'input_folder': 'direct_sun_hours'}
     )
     def restructure_timestep_results(
         self, input_folder=input_folder,
-        extension='ill'
+        extension='ill', dist_info=dist_info, as_text=True, fmt='%i',
+        delimiter='tab'
     ):
         return [
             {
-                'from': MergeFolderData()._outputs.output_folder,
+                'from': MergeFolderDataPostprocess()._outputs.output_folder,
                 'to': 'results/direct_sun_hours'
             }
         ]
