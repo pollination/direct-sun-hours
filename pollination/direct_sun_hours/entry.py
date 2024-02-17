@@ -129,14 +129,16 @@ class DirectSunHoursEntryPoint(DAG):
         sub_paths={
             'grids_info': 'grids_info.json',
             'sun_up_hours': 'sun-up-hours.txt',
-            'timestep': 'timestep.txt'
+            'timestep': 'timestep.txt',
+            'dist_info': 'grid/_redist_info.json'
             }
     )
     def postprocess_direct_sun_hours(
         self, input_folder=prepare_folder_direct_sun_hours._outputs.initial_results,
         grids_info=prepare_folder_direct_sun_hours._outputs.resources,
         sun_up_hours=prepare_folder_direct_sun_hours._outputs.resources,
-        timestep=prepare_folder_direct_sun_hours._outputs.resources
+        timestep=prepare_folder_direct_sun_hours._outputs.resources,
+        dist_info=prepare_folder_direct_sun_hours._outputs.resources
     ):
         return [
             {
