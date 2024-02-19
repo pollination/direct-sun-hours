@@ -168,11 +168,6 @@ class DirectSunHoursEntryPoint(DAG):
             }
         ]
 
-    visualization = Outputs.file(
-        source='visualization.vsf',
-        description='Result visualization in VisualizationSet format.'
-    )
-
     direct_sun_hours = Outputs.folder(
         source='results/direct_sun_hours',
         description='Hourly results for direct sun hours.',
