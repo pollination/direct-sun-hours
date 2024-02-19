@@ -1,10 +1,8 @@
 from pollination_dsl.dag import Inputs, DAG, task
 from dataclasses import dataclass
 
-from pollination.honeybee_radiance.post_process import ConvertToBinary, SumRow
 from pollination.honeybee_radiance_postprocess.post_process import DirectSunHours
 from pollination.honeybee_radiance.contrib import DaylightContribution
-from pollination.path.copy import Copy
 
 
 @dataclass

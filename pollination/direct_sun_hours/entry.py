@@ -1,5 +1,6 @@
 from pollination_dsl.dag import Inputs, DAG, task, Outputs
 from dataclasses import dataclass
+from pollination.honeybee_radiance_postprocess.grid import MergeFolderData
 
 # input/output alias
 from pollination.alias.inputs.model import hbjson_model_grid_input
@@ -127,6 +128,7 @@ class DirectSunHoursEntryPoint(DAG):
         template=DirectSunHoursPostprocess,
         needs=[prepare_folder_direct_sun_hours, direct_sun_hours_raytracing],
         sub_paths={
+            'input_folder': 'cumulative',
             'grids_info': 'grids_info.json',
             'sun_up_hours': 'sun-up-hours.txt',
             'timestep': 'timestep.txt',
@@ -146,6 +148,30 @@ class DirectSunHoursEntryPoint(DAG):
                 'to': 'results'
             }
         ]
+
+    @task(
+        template=MergeFolderData,
+        needs=[prepare_folder_direct_sun_hours, direct_sun_hours_raytracing],
+        sub_paths={
+            'dist_info': 'grid/_redist_info.json'
+        }
+    )
+    def restructure_results(
+        self, input_folder='initial_results/direct_sun_hours',
+        dist_info=prepare_folder_direct_sun_hours._outputs.resources,
+        extension='ill', as_text=True, fmt='%i', delimiter='tab'
+    ):
+        return [
+            {
+                'from': MergeFolderData()._outputs.output_folder,
+                'to': 'results/direct_sun_hours'
+            }
+        ]
+
+    visualization = Outputs.file(
+        source='visualization.vsf',
+        description='Result visualization in VisualizationSet format.'
+    )
 
     direct_sun_hours = Outputs.folder(
         source='results/direct_sun_hours',
