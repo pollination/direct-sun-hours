@@ -184,3 +184,8 @@ class DirectSunHoursEntryPoint(DAG):
         description='Cumulative direct sun hours for all the input hours.',
         alias=cumulative_sun_hour_results
     )
+
+    visualization = Outputs.file(
+        source='visualization.vsf',
+        description='Direct sun hours result visualization in VisualizationSet format.'
+    )

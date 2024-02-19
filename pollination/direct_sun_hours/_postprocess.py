@@ -1,7 +1,6 @@
 from pollination_dsl.dag import Inputs, GroupedDAG, task, Outputs
 from dataclasses import dataclass
 from pollination.honeybee_radiance.grid import MergeFolderData
-from pollination.honeybee_radiance_postprocess.grid import MergeFolderData as MergeFolderDataPostprocess
 from pollination.honeybee_radiance.post_process import DirectSunHoursVisMetadata
 from pollination.path.copy import CopyFile, CopyFileMultiple
 from pollination.honeybee_display.translate import ModelToVis
